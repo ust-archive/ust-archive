@@ -1,0 +1,42 @@
+name: Update Schedule
+
+on:
+  schedule:
+    # "At every 15-th minute."
+    # This accords to the website description that the information is updated every 15-20 minutes.
+    # See: https://w5.ab.ust.hk/wcq/cgi-bin
+    - cron: "*/15 * * * *"
+
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oven-sh/setup-bun@v2
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: actions/checkout@v6
+        with:
+          repository: "ust-archive/ust-cc"
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Pull Schedule
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        working-directory: packages/updater
+        run: |
+          uvx hf download --repo-type dataset ust-archive/schedule --local-dir import_data
+
+      - name: Update Schedule
+        working-directory: packages/updater
+        run: |
+          bun install --production
+          bun go schedule --input import_data --output export_data
+
+      - name: Push Schedule
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        working-directory: packages/updater
+        run: |
+          uvx hf upload --repo-type dataset ust-archive/schedule export_data . --commit-message "update(v0): $(TZ='Asia/Hong_Kong' date --iso-8601=seconds)"

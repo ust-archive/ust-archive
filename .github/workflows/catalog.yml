@@ -1,0 +1,41 @@
+name: Update Catalog
+
+on:
+  schedule:
+    # "At 20:21." (UTC)
+    # "At 04:21." (HKT)
+    - cron: "21 20 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oven-sh/setup-bun@v2
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: actions/checkout@v6
+        with:
+          repository: "ust-archive/ust-cc"
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Pull Catalog
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        working-directory: packages/updater
+        run: |
+          uvx hf download --repo-type dataset ust-archive/catalog --local-dir import_data
+
+      - name: Update Catalog
+        working-directory: packages/updater
+        run: |
+          bun install --production
+          bun go catalog --input import_data --output export_data
+
+      - name: Push Catalog
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        working-directory: packages/updater
+        run: |
+          uvx hf upload --repo-type dataset ust-archive/catalog export_data . --commit-message "update(v0): $(TZ='Asia/Hong_Kong' date --iso-8601=seconds)"

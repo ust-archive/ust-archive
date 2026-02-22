@@ -1,0 +1,31 @@
+# This workflow is designed to keep the GitHub repository active by committing
+# to a keep-alive branch. This prevents the cron jobs from being frozen due to
+# inactivity.
+
+name: Keep Alive
+
+on:
+  schedule:
+    # "At 20:21 on day-of-month 3." (UTC)
+    # "At 04:21 on day-of-month 4." (HKT)
+    - cron: "21 20 3 * *"
+
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: keep-alive
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+      - run: |
+          git config --local user.name "UST Rankings Bot"
+          git config --local user.email "bot@ust-rankings.com"
+          git commit --message "keep-alive" --allow-empty
+      - uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          branch: keep-alive
