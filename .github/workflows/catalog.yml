@@ -28,6 +28,8 @@ jobs:
           uvx hf download --repo-type dataset ust-archive/catalog --local-dir import_data
 
       - name: Update Catalog
+        env:
+          UST_EMAIL: ${{ secrets.UST_EMAIL }}
         working-directory: packages/updater
         run: |
           bun install --production
