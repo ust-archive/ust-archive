@@ -29,6 +29,8 @@ jobs:
           uvx hf download --repo-type dataset ust-archive/schedule --local-dir import_data
 
       - name: Update Schedule
+        env:
+          UST_EMAIL: ${{ secrets.UST_EMAIL }}
         working-directory: packages/updater
         run: |
           bun install --production
