@@ -29,7 +29,8 @@ jobs:
 
       - name: Update ust.space Data
         env:
-          UST_EMAIL: ${{ secrets.UST_EMAIL }}
+          UST_SPACE_USERNAME: ${{ secrets.UST_SPACE_USERNAME }}
+          UST_SPACE_PASSWORD: ${{ secrets.UST_SPACE_PASSWORD }}
         working-directory: packages/updater
         run: |
           bun install --production
