@@ -7,6 +7,8 @@ The structured Index of Data @ HKUST.
 - The Course Catalog. https://huggingface.co/datasets/ust-archive/catalog
 - The Class Schedule & Quota. https://huggingface.co/datasets/ust-archive/schedule
 - The Credit Transfer Database. https://huggingface.co/datasets/ust-archive/credit-transfer
+- The Faculty Profiles. https://huggingface.co/datasets/ust-archive/faculty
+- The ust.space Data. https://huggingface.co/datasets/ust-archive/ust-space
 - Coming soon™...
 
 ## Disclaimer
