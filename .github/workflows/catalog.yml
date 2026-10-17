@@ -17,20 +17,31 @@ jobs:
 
       - uses: actions/checkout@v6
         with:
+          path: workflow
+          persist-credentials: false
+
+      - name: Check Hugging Face access
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 workflow/scripts/hf_preflight.py ust-archive/catalog
+
+      - uses: actions/checkout@v6
+        with:
           repository: "ust-archive/ust-cc"
+          path: scraper
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Pull Catalog
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        working-directory: packages/updater
+        working-directory: scraper/packages/updater
         run: |
           uvx hf download --repo-type dataset ust-archive/catalog --local-dir import_data
 
       - name: Update Catalog
         env:
           UST_EMAIL: ${{ secrets.UST_EMAIL }}
-        working-directory: packages/updater
+        working-directory: scraper/packages/updater
         run: |
           bun install --production
           bun go catalog --input import_data --output export_data
@@ -38,6 +49,6 @@ jobs:
       - name: Push Catalog
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        working-directory: packages/updater
+        working-directory: scraper/packages/updater
         run: |
           uvx hf upload --repo-type dataset ust-archive/catalog export_data . --commit-message "update(v0): $(TZ='Asia/Hong_Kong' date --iso-8601=seconds)"
