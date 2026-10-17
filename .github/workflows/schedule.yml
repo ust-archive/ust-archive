@@ -16,6 +16,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - uses: astral-sh/setup-uv@v5
 
+      - name: Check Hugging Face authentication
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          : "${HF_TOKEN:?HF_TOKEN is not set}"
+          uvx hf auth whoami
+
       - uses: actions/checkout@v6
         with:
           repository: "ust-archive/ust-cc"
