@@ -15,26 +15,41 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - uses: astral-sh/setup-uv@v5
 
-      - uses: actions/checkout@v6
-        with:
-          path: workflow
-          persist-credentials: false
-
       - name: Check Hugging Face access
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python3 workflow/scripts/hf_preflight.py ust-archive/ust-space
+          HF_DATASET: ust-archive/ust-space
+        run: |
+          if [[ -z "${HF_TOKEN//[[:space:]]/}" ]]; then
+            echo "::error::HF_TOKEN is missing or blank"; exit 1
+          fi
+          for check in whoami-v2 "datasets/$HF_DATASET/auth-check" "datasets/$HF_DATASET/auth-check/write"; do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --connect-timeout 10 --max-time 30 --header "Authorization: Bearer $HF_TOKEN" \
+              "https://huggingface.co/api/$check") || {
+              echo "::error::Hugging Face network/TLS failure"; exit 1
+            }
+            case "$check:$status" in
+              *:2??) continue ;;
+              whoami-v2:401) reason="authentication failed" ;;
+              *:401|*:403) reason="access denied; check token scopes and organization policy" ;;
+              *:404) reason="resource missing or inaccessible" ;;
+              *:429) reason="rate limited" ;;
+              *:5??) reason="service unavailable" ;;
+              *) reason="unexpected response" ;;
+            esac
+            echo "::error::Hugging Face $check: $reason (HTTP $status)"; exit 1
+          done
 
       - uses: actions/checkout@v6
         with:
           repository: "ust-archive/ust-cc"
-          path: scraper
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Pull ust.space Data
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        working-directory: scraper/packages/updater
+        working-directory: packages/updater
         run: |
           uvx hf download --repo-type dataset ust-archive/ust-space --local-dir import_data
 
@@ -42,7 +57,7 @@ jobs:
         env:
           UST_SPACE_USERNAME: ${{ secrets.UST_SPACE_USERNAME }}
           UST_SPACE_PASSWORD: ${{ secrets.UST_SPACE_PASSWORD }}
-        working-directory: scraper/packages/updater
+        working-directory: packages/updater
         run: |
           bun install --production
           bun go ust-space --input import_data --output export_data
@@ -50,6 +65,6 @@ jobs:
       - name: Push ust.space Data
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        working-directory: scraper/packages/updater
+        working-directory: packages/updater
         run: |
           uvx hf upload --repo-type dataset ust-archive/ust-space export_data . --commit-message "update(v0): $(TZ='Asia/Hong_Kong' date --iso-8601=seconds)"
