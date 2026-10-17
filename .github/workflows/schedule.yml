@@ -16,31 +16,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - uses: astral-sh/setup-uv@v5
 
-      - name: Check Hugging Face access
+      - name: Check Hugging Face authentication
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_DATASET: ust-archive/schedule
         run: |
-          if [[ -z "${HF_TOKEN//[[:space:]]/}" ]]; then
-            echo "::error::HF_TOKEN is missing or blank"; exit 1
-          fi
-          for check in whoami-v2 "datasets/$HF_DATASET/auth-check" "datasets/$HF_DATASET/auth-check/write"; do
-            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-              --connect-timeout 10 --max-time 30 --header "Authorization: Bearer $HF_TOKEN" \
-              "https://huggingface.co/api/$check") || {
-              echo "::error::Hugging Face network/TLS failure"; exit 1
-            }
-            case "$check:$status" in
-              *:2??) continue ;;
-              whoami-v2:401) reason="authentication failed" ;;
-              *:401|*:403) reason="access denied; check token scopes and organization policy" ;;
-              *:404) reason="resource missing or inaccessible" ;;
-              *:429) reason="rate limited" ;;
-              *:5??) reason="service unavailable" ;;
-              *) reason="unexpected response" ;;
-            esac
-            echo "::error::Hugging Face $check: $reason (HTTP $status)"; exit 1
-          done
+          : "${HF_TOKEN:?HF_TOKEN is not set}"
+          uvx hf auth whoami
 
       - uses: actions/checkout@v6
         with:
